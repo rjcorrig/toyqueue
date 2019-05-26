@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Queue;
@@ -21,7 +22,7 @@ dotnet run deq [N]
     (Dequeues and prints N messages. Default N = 1)
 
 ";
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             if (args.Length == 0 || args[0] != "enq" && args[0] != "deq")
             {
@@ -40,7 +41,7 @@ dotnet run deq [N]
 
             if (args[0] == "enq")
             {
-                QueueArgs(args.AsSpan(1));
+                await QueueArgs(args.AsSpan().Slice(1).ToArray());
             }
             else if (args.Length > 1)
             {
@@ -48,42 +49,42 @@ dotnet run deq [N]
                 if (numberOfMessages == 0)
                     numberOfMessages = 1;
 
-                Dequeue(numberOfMessages);
+                await Dequeue(numberOfMessages);
             }
             else
             {
-                Dequeue(1);
+                await Dequeue(1);
             }
         }
 
-        static void QueueArgs(Span<string> args)
+        static async Task QueueArgs(string[] args)
         {
             CloudQueueClient client = StorageAccount.CreateCloudQueueClient();
             CloudQueue queue = client.GetQueueReference("toyqueue");
-            queue.CreateIfNotExists();
+            await queue.CreateIfNotExistsAsync();
 
             foreach (string arg in args)
             {
                 Console.Write($"Queueing {arg}...");
-                queue.AddMessage(new CloudQueueMessage(arg));
+                await queue.AddMessageAsync(new CloudQueueMessage(arg));
                 Console.WriteLine(" queued.");
             }
         }
 
-        static void Dequeue(int numberOfMessages)
+        static async Task Dequeue(int numberOfMessages)
         {
             CloudQueueClient client = StorageAccount.CreateCloudQueueClient();
             CloudQueue queue = client.GetQueueReference("toyqueue");
-            queue.CreateIfNotExists();
+            await queue.CreateIfNotExistsAsync();
 
             for (int i = 0; i < numberOfMessages; i++)
             {
                 Console.Write("Dequeue... ");
-                CloudQueueMessage message = queue.GetMessage();
+                CloudQueueMessage message = await queue.GetMessageAsync();
                 if (message != null)
                 {
                     Console.WriteLine(message.AsString);
-                    queue.DeleteMessage(message);
+                    await queue.DeleteMessageAsync(message);
                 }
                 else
                 {

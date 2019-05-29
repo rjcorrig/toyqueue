@@ -11,6 +11,7 @@ namespace ToyQueue
     {
         static IConfigurationRoot Configuration { get; set; }
         static CloudStorageAccount StorageAccount { get; set; }
+        static string QueueName { get; set; }
         
         static string Usage = @"
 usage:
@@ -32,12 +33,14 @@ dotnet run deq [N]
 
             var builder = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
                 .AddJsonFile("storagekeys.json", optional: false, reloadOnChange: true)
                 .AddEnvironmentVariables();
 
             Configuration = builder.Build();
 
             StorageAccount = CloudStorageAccount.Parse(Configuration["ConnectionStrings:Key1"]);
+            QueueName = Configuration["QueueName"];
 
             if (args[0] == "enq")
             {
@@ -60,7 +63,7 @@ dotnet run deq [N]
         static async Task QueueArgs(string[] args)
         {
             CloudQueueClient client = StorageAccount.CreateCloudQueueClient();
-            CloudQueue queue = client.GetQueueReference("toyqueue");
+            CloudQueue queue = client.GetQueueReference(QueueName);
             await queue.CreateIfNotExistsAsync();
 
             foreach (string arg in args)
@@ -74,7 +77,7 @@ dotnet run deq [N]
         static async Task Dequeue(int numberOfMessages)
         {
             CloudQueueClient client = StorageAccount.CreateCloudQueueClient();
-            CloudQueue queue = client.GetQueueReference("toyqueue");
+            CloudQueue queue = client.GetQueueReference(QueueName);
             await queue.CreateIfNotExistsAsync();
 
             for (int i = 0; i < numberOfMessages; i++)
